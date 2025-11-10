@@ -248,20 +248,9 @@ function removeMessage(messageId) {
     }
 }
 
-// BOTの応答を生成（Gemini AI優先モード）
+// BOTの応答を生成（完全Gemini AIモード）
 async function generateResponse(userMessage) {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // 簡単な挨拶のみローカルで対応（高速化のため）
-    if (lowerMessage.includes('こんにちは') || lowerMessage.includes('はじめまして')) {
-        return `こんにちは！😊<br>パソコン太郎へようこそ！<br>何かお困りのことがあれば、お気軽にお聞きください。`;
-    }
-    
-    if (lowerMessage.includes('ありがとう')) {
-        return `どういたしまして！😊<br>他にも質問があれば、いつでもどうぞ！`;
-    }
-    
-    // その他すべての質問はGemini APIで回答（詳しく柔軟な回答）
+    // すべての質問をGemini APIで回答（挨拶も含む）
     try {
         const geminiResponse = await callGeminiAPI(userMessage);
         return geminiResponse;
