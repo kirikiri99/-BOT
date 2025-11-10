@@ -1,3 +1,7 @@
+// Gemini API設定
+const GEMINI_API_KEY = 'AIzaSyDPTbRIHmhumwKNT27nDQoC1d1TzWGa77k';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
 // 知識ベース - パソコン太郎の情報
 const knowledgeBase = {
     // 会社概要
@@ -181,7 +185,7 @@ const knowledgeBase = {
 };
 
 // メッセージ送信処理
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('userInput');
     const message = input.value.trim();
     
@@ -193,11 +197,19 @@ function sendMessage() {
     // 入力欄をクリア
     input.value = '';
     
+    // ローディング表示
+    const loadingId = addMessage('考え中...💭', 'bot');
+    
     // BOTの応答を生成
-    setTimeout(() => {
-        const response = generateResponse(message);
+    try {
+        const response = await generateResponse(message);
+        removeMessage(loadingId);
         addMessage(response, 'bot');
-    }, 500);
+    } catch (error) {
+        removeMessage(loadingId);
+        addMessage('申し訳ございません。エラーが発生しました。もう一度お試しください。', 'bot');
+        console.error('Error:', error);
+    }
 }
 
 // メッセージを画面に追加
@@ -205,6 +217,10 @@ function addMessage(text, sender) {
     const messagesContainer = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
+    
+    // ユニークIDを付与
+    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    messageDiv.id = messageId;
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
@@ -220,13 +236,23 @@ function addMessage(text, sender) {
     
     // 最新メッセージまでスクロール
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return messageId;
+}
+
+// メッセージを削除
+function removeMessage(messageId) {
+    const messageElement = document.getElementById(messageId);
+    if (messageElement) {
+        messageElement.remove();
+    }
 }
 
 // BOTの応答を生成
-function generateResponse(userMessage) {
+async function generateResponse(userMessage) {
     const lowerMessage = userMessage.toLowerCase();
     
-    // 知識ベースから最適な回答を検索
+    // まず知識ベースから検索
     for (const [key, data] of Object.entries(knowledgeBase)) {
         for (const keyword of data.keywords) {
             if (lowerMessage.includes(keyword.toLowerCase())) {
@@ -235,7 +261,7 @@ function generateResponse(userMessage) {
         }
     }
     
-    // 挨拶への対応
+    // 簡単な挨拶への対応
     if (lowerMessage.includes('こんにちは') || lowerMessage.includes('はじめまして')) {
         return `こんにちは！😊<br>パソコン太郎へようこそ！<br>何かお困りのことがあれば、お気軽にお聞きください。`;
     }
@@ -244,16 +270,80 @@ function generateResponse(userMessage) {
         return `どういたしまして！😊<br>他にも質問があれば、いつでもどうぞ！`;
     }
     
-    // デフォルトの応答
-    return `申し訳ございません。その質問については、まだ情報を持っていません。🙏<br><br>
-    以下のトピックについてはお答えできます:<br>
-    ・会社概要・事業内容<br>
-    ・講演会・イベント企画<br>
-    ・絵本事業（販売・制作）<br>
-    ・IT教育・職業教育<br>
-    ・地域連携・社会貢献<br>
-    ・イベント運営業務<br><br>
-    または、直属の上司にお問い合わせください。`;
+    // 知識ベースにない場合はGemini APIで回答
+    try {
+        const geminiResponse = await callGeminiAPI(userMessage);
+        return geminiResponse;
+    } catch (error) {
+        console.error('Gemini API Error:', error);
+        // Gemini APIエラー時のフォールバック
+        return `申し訳ございません。その質問については、まだ情報を持っていません。🙏<br><br>
+        以下のトピックについてはお答えできます:<br>
+        ・会社概要・事業内容<br>
+        ・講演会・イベント企画<br>
+        ・絵本事業（販売・制作）<br>
+        ・IT教育・職業教育<br>
+        ・地域連携・社会貢献<br>
+        ・イベント運営業務<br><br>
+        または、直属の上司にお問い合わせください。`;
+    }
+}
+
+// Gemini APIを呼び出す
+async function callGeminiAPI(userMessage) {
+    // パソコン太郎の会社情報をコンテキストとして提供
+    const companyContext = `
+あなたはパソコン太郎の新入社員サポートBOTです。
+
+パソコン太郎について：
+- 講演会・イベント企画運営（堀江貴文氏、茂木健一郎氏などの講演会を主催）
+- 児童向け絵本の制作・販売（夢絵本シリーズ、職育シリーズ、番外編シリーズ）
+- IT教育・職業教育コンテンツの提供
+- 地域・行政との連携事業（環境省・栃木県鹿沼市と協働）
+- 社会貢献活動（絵本販売利益の寄贈）
+- 拠点：栃木県を中心に活動
+- 公式サイト：https://pasotaro.com
+
+主な実績：
+- 2020年11月：堀江貴文×パソコン太郎 講演会（鹿沼市民文化センター）
+- 2021年12月：茂木健一郎×パソコン太郎 講演会（古峯神社）
+- 2022年3月：堀江貴文特別講演会（栃木県総合文化センター メインホール）
+
+以下の質問に、パソコン太郎の新入社員向けに優しく、わかりやすく回答してください。
+会社の情報に関係ない質問の場合は、丁寧に会社業務に関する質問をお願いする旨を伝えてください。
+
+質問：${userMessage}
+`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{
+                text: companyContext
+            }]
+        }]
+    };
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const text = data.candidates[0].content.parts[0].text;
+        // 改行を<br>に変換
+        return text.replace(/\n/g, '<br>');
+    } else {
+        throw new Error('Invalid response from Gemini API');
+    }
 }
 
 // クイックボタンからの質問
