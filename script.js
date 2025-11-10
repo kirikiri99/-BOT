@@ -248,20 +248,11 @@ function removeMessage(messageId) {
     }
 }
 
-// BOTの応答を生成
+// BOTの応答を生成（Gemini AI優先モード）
 async function generateResponse(userMessage) {
     const lowerMessage = userMessage.toLowerCase();
     
-    // まず知識ベースから検索
-    for (const [key, data] of Object.entries(knowledgeBase)) {
-        for (const keyword of data.keywords) {
-            if (lowerMessage.includes(keyword.toLowerCase())) {
-                return data.answer;
-            }
-        }
-    }
-    
-    // 簡単な挨拶への対応
+    // 簡単な挨拶のみローカルで対応（高速化のため）
     if (lowerMessage.includes('こんにちは') || lowerMessage.includes('はじめまして')) {
         return `こんにちは！😊<br>パソコン太郎へようこそ！<br>何かお困りのことがあれば、お気軽にお聞きください。`;
     }
@@ -270,47 +261,108 @@ async function generateResponse(userMessage) {
         return `どういたしまして！😊<br>他にも質問があれば、いつでもどうぞ！`;
     }
     
-    // 知識ベースにない場合はGemini APIで回答
+    // その他すべての質問はGemini APIで回答（詳しく柔軟な回答）
     try {
         const geminiResponse = await callGeminiAPI(userMessage);
         return geminiResponse;
     } catch (error) {
         console.error('Gemini API Error:', error);
-        // Gemini APIエラー時のフォールバック
-        return `申し訳ございません。その質問については、まだ情報を持っていません。🙏<br><br>
-        以下のトピックについてはお答えできます:<br>
-        ・会社概要・事業内容<br>
-        ・講演会・イベント企画<br>
-        ・絵本事業（販売・制作）<br>
-        ・IT教育・職業教育<br>
-        ・地域連携・社会貢献<br>
-        ・イベント運営業務<br><br>
-        または、直属の上司にお問い合わせください。`;
+        // Gemini APIエラー時のみ知識ベースにフォールバック
+        return getFallbackResponse(userMessage);
     }
 }
 
-// Gemini APIを呼び出す
-async function callGeminiAPI(userMessage) {
-    // パソコン太郎の会社情報をコンテキストとして提供
-    const companyContext = `
-あなたはパソコン太郎の新入社員サポートBOTです。
+// エラー時のフォールバック応答（知識ベースを使用）
+function getFallbackResponse(userMessage) {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    // 知識ベースから検索
+    for (const [key, data] of Object.entries(knowledgeBase)) {
+        for (const keyword of data.keywords) {
+            if (lowerMessage.includes(keyword.toLowerCase())) {
+                return data.answer;
+            }
+        }
+    }
+    
+    // デフォルトの応答
+    return `申し訳ございません。現在接続に問題があるようです。🙏<br><br>
+    以下のトピックについてお答えできます:<br>
+    ・会社概要・事業内容<br>
+    ・講演会・イベント企画<br>
+    ・絵本事業（販売・制作）<br>
+    ・IT教育・職業教育<br>
+    ・地域連携・社会貢献<br>
+    ・イベント運営業務<br><br>
+    または、直属の上司にお問い合わせください。`;
+}
 
-パソコン太郎について：
-- 講演会・イベント企画運営（堀江貴文氏、茂木健一郎氏などの講演会を主催）
-- 児童向け絵本の制作・販売（夢絵本シリーズ、職育シリーズ、番外編シリーズ）
+// Gemini APIを呼び出す（詳細な会社情報付き）
+async function callGeminiAPI(userMessage) {
+    // パソコン太郎の詳細な会社情報をコンテキストとして提供
+    const companyContext = `
+あなたはパソコン太郎の新入社員サポートBOTです。質問に対して、詳しく、丁寧に、わかりやすく回答してください。
+
+【パソコン太郎について】
+
+■ 会社概要
+- 講演会・イベント企画運営（堀江貴文氏、茂木健一郎氏などの著名人講演会を主催）
+- 児童向け絵本の制作・販売
 - IT教育・職業教育コンテンツの提供
-- 地域・行政との連携事業（環境省・栃木県鹿沼市と協働）
+- 地域・行政との連携事業
 - 社会貢献活動（絵本販売利益の寄贈）
 - 拠点：栃木県を中心に活動
 - 公式サイト：https://pasotaro.com
 
-主な実績：
+■ 講演会・イベント実績
 - 2020年11月：堀江貴文×パソコン太郎 講演会（鹿沼市民文化センター）
-- 2021年12月：茂木健一郎×パソコン太郎 講演会（古峯神社）
+- 2021年12月：茂木健一郎×パソコン太郎 講演会（古峯神社、主催：ほわっと自然村）
 - 2022年3月：堀江貴文特別講演会（栃木県総合文化センター メインホール）
+イベント企画の流れ：企画立案→講師交渉→会場手配→集客（SNS活用）→当日運営→報告
 
-以下の質問に、パソコン太郎の新入社員向けに優しく、わかりやすく回答してください。
-会社の情報に関係ない質問の場合は、丁寧に会社業務に関する質問をお願いする旨を伝えてください。
+■ 絵本事業
+- 夢絵本シリーズ：ITの楽しさと危険性を伝える教育絵本
+- 職育シリーズ（外伝）：様々な職業を紹介し、キャリア教育をサポート（第1巻〜第6巻）
+- 番外編シリーズ：環境省・栃木県鹿沼市と連携したクールチョイス事業
+- 販売：Amazonで販売、購入利益は寄贈資金として活用
+- 対象：児童・保護者・教育機関
+
+■ IT教育・職業教育
+- ITの楽しさを伝える活動
+- デジタル時代のリスク啓発（情報リテラシー向上）
+- 子どもたちの未来を応援する職業教育
+- 楽しく学べるコンテンツ作り
+
+■ 地域連携・社会貢献
+- 環境省との協働プロジェクト
+- 栃木県鹿沼市との連携事業
+- クールチョイス事業への参画
+- 地域イベントの企画・運営
+- 教育機関へのサポート
+
+■ イベント運営業務
+新入社員が担当する可能性がある業務：
+- 会場設営・受付対応
+- 音響・映像機材の準備
+- 講師アテンド・進行サポート
+- 来場者対応・誘導
+- SNS発信（当日レポート）
+- 物販対応（絵本販売など）
+
+■ 会社のビジョン
+- 子どもたちの未来を応援
+- IT教育・職業教育の推進
+- 地域社会への貢献
+- 有意義なイベントの提供
+- 教育を通じた社会貢献
+- 楽しく・わかりやすく伝える
+
+【回答時の注意事項】
+1. 新入社員向けに優しく、具体的に説明してください
+2. 適切に絵文字を使って親しみやすく回答してください
+3. 必要に応じて箇条書きや段落を使って読みやすく構成してください
+4. 会社の情報に関係ない質問の場合は、丁寧に会社業務に関する質問をお願いする旨を伝えてください
+5. わからないことは「詳細は直属の上司や担当者にご確認ください」と案内してください
 
 質問：${userMessage}
 `;
@@ -320,7 +372,11 @@ async function callGeminiAPI(userMessage) {
             parts: [{
                 text: companyContext
             }]
-        }]
+        }],
+        generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+        }
     };
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -339,8 +395,10 @@ async function callGeminiAPI(userMessage) {
     
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         const text = data.candidates[0].content.parts[0].text;
-        // 改行を<br>に変換
-        return text.replace(/\n/g, '<br>');
+        // 改行を<br>に変換、マークダウンの太字を<strong>に変換
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
     } else {
         throw new Error('Invalid response from Gemini API');
     }
