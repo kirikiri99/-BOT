@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パソコン太郎 新入社員BOT</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>🤖 パソコン太郎 新入社員サポートBOT</h1>
+                <p class="subtitle">会社のこと、何でも気軽に聞いてください！</p>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="quick-actions">
+                <h3>よくある質問</h3>
+                <div class="quick-buttons">
+                    <button class="quick-btn" onclick="askQuestion('会社の事業内容を教えてください')">🏢 会社概要</button>
+                    <button class="quick-btn" onclick="askQuestion('講演会について教えてください')">🎤 講演会</button>
+                    <button class="quick-btn" onclick="askQuestion('絵本事業について教えてください')">📖 絵本事業</button>
+                    <button class="quick-btn" onclick="askQuestion('IT教育について教えてください')">🎓 教育事業</button>
+                    <button class="quick-btn" onclick="askQuestion('地域連携について教えてください')">🤝 地域連携</button>
+                    <button class="quick-btn" onclick="askQuestion('イベント運営の仕事について')">🎪 イベント運営</button>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot-message">
+                        <div class="message-content">
+                            <strong>BOT:</strong> こんにちは！パソコン太郎へようこそ！🎉<br>
+                            講演会企画、絵本出版、IT教育など、当社の事業について何でもお気軽にお聞きください。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <input 
+                        type="text" 
+                        id="userInput" 
+                        class="chat-input" 
+                        placeholder="質問を入力してください..."
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button class="send-btn" onclick="sendMessage()">送信</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
