@@ -1,6 +1,6 @@
 // Gemini API設定
 const GEMINI_API_KEY = 'AIzaSyDPTbRIHmhumwKNT27nDQoC1d1TzWGa77k';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
 
 // 知識ベース - パソコン太郎の情報
 const knowledgeBase = {
