@@ -256,6 +256,9 @@ async function generateResponse(userMessage) {
         return geminiResponse;
     } catch (error) {
         console.error('Gemini API Error:', error);
+        console.error('Error details:', error.message);
+        // デバッグ用：エラーをアラート表示（開発時のみ）
+        // alert('API Error: ' + error.message);
         // Gemini APIエラー時のみ知識ベースにフォールバック
         return getFallbackResponse(userMessage);
     }
@@ -377,10 +380,13 @@ async function callGeminiAPI(userMessage) {
     });
 
     if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Response Error:', errorData);
+        throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
+    console.log('API Response:', data);
     
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         const text = data.candidates[0].content.parts[0].text;
@@ -389,6 +395,7 @@ async function callGeminiAPI(userMessage) {
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\n/g, '<br>');
     } else {
+        console.error('Invalid API response structure:', data);
         throw new Error('Invalid response from Gemini API');
     }
 }
