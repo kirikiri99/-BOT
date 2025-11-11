@@ -186,10 +186,15 @@ const knowledgeBase = {
 
 // メッセージ送信処理
 async function sendMessage() {
+    console.log('📤 sendMessage() called');
     const input = document.getElementById('userInput');
     const message = input.value.trim();
+    console.log('📝 User message:', message);
     
-    if (message === '') return;
+    if (message === '') {
+        console.log('⚠️ Empty message, returning');
+        return;
+    }
     
     // ユーザーメッセージを表示
     addMessage(message, 'user');
@@ -198,17 +203,21 @@ async function sendMessage() {
     input.value = '';
     
     // ローディング表示
+    console.log('⏳ Showing loading message');
     const loadingId = addMessage('考え中...💭', 'bot');
     
     // BOTの応答を生成
     try {
+        console.log('🤖 Calling generateResponse()');
         const response = await generateResponse(message);
+        console.log('✅ Response received:', response.substring(0, 100) + '...');
         removeMessage(loadingId);
         addMessage(response, 'bot');
     } catch (error) {
+        console.error('❌ Error in sendMessage:', error);
+        console.error('Error stack:', error.stack);
         removeMessage(loadingId);
-        addMessage('申し訳ございません。エラーが発生しました。もう一度お試しください。', 'bot');
-        console.error('Error:', error);
+        addMessage(`申し訳ございません。エラーが発生しました。<br>エラー: ${error.message}<br>詳細はコンソールをご確認ください。`, 'bot');
     }
 }
 
@@ -250,16 +259,20 @@ function removeMessage(messageId) {
 
 // BOTの応答を生成（完全Gemini AIモード）
 async function generateResponse(userMessage) {
+    console.log('🔄 generateResponse() called with:', userMessage);
     // すべての質問をGemini APIで回答（挨拶も含む）
     try {
+        console.log('🌐 Calling Gemini API...');
         const geminiResponse = await callGeminiAPI(userMessage);
+        console.log('✅ Gemini API success');
         return geminiResponse;
     } catch (error) {
-        console.error('Gemini API Error:', error);
-        console.error('Error details:', error.message);
-        // デバッグ用：エラーをアラート表示（開発時のみ）
-        // alert('API Error: ' + error.message);
+        console.error('❌ Gemini API Error:', error);
+        console.error('Error type:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         // Gemini APIエラー時のみ知識ベースにフォールバック
+        console.log('🔄 Falling back to knowledge base');
         return getFallbackResponse(userMessage);
     }
 }
@@ -291,6 +304,10 @@ function getFallbackResponse(userMessage) {
 
 // Gemini APIを呼び出す（詳細な会社情報付き）
 async function callGeminiAPI(userMessage) {
+    console.log('🔧 callGeminiAPI() started');
+    console.log('API URL:', GEMINI_API_URL);
+    console.log('API Key exists:', !!GEMINI_API_KEY);
+    
     // パソコン太郎の詳細な会社情報をコンテキストとして提供
     const companyContext = `
 あなたはパソコン太郎の新入社員サポートBOTです。質問に対して、詳しく、丁寧に、わかりやすく回答してください。
@@ -422,6 +439,9 @@ async function callGeminiAPI(userMessage) {
             maxOutputTokens: 1024,
         }
     };
+    
+    console.log('📦 Request body prepared, size:', JSON.stringify(requestBody).length, 'bytes');
+    console.log('🌐 Sending fetch request to Gemini API...');
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -430,15 +450,20 @@ async function callGeminiAPI(userMessage) {
         },
         body: JSON.stringify(requestBody)
     });
+    
+    console.log('📡 Fetch response received, status:', response.status, response.statusText);
 
     if (!response.ok) {
+        console.error('❌ Response not OK, status:', response.status);
         const errorData = await response.json().catch(() => ({}));
-        console.error('API Response Error:', errorData);
+        console.error('📄 Error data:', errorData);
         throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
+    console.log('✅ Response OK, parsing JSON...');
     const data = await response.json();
-    console.log('API Response:', data);
+    console.log('📊 API Response data:', data);
+    console.log('📊 Candidates:', data.candidates);
     
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         const text = data.candidates[0].content.parts[0].text;
